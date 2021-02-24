@@ -1,0 +1,10 @@
+{
+  "domain": "pollen_hu",
+  "name": "Pollen Information Hungary",
+  "documentation": "https://github.com/amaximus/pollen-hu",
+  "issue_tracker": "https://github.com/amaximus/pollen-hu/issues",
+  "version": "0.0.1",
+  "dependencies": [],
+  "codeowners": ["@amaximus"],
+  "requirements": []
+}

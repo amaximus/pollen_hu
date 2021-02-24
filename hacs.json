@@ -1,0 +1,8 @@
+{
+  "name": "Pollen Information Hungary",
+  "country": ["HU"],
+  "domains": ["sensor"],
+  "render_readme": "true",
+  "content_in_root": "true",
+  "iot_class": ["Assumed State", "Cloud Polling"] 
+}
