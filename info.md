@@ -69,7 +69,7 @@ card:
 ```
 
 #### Custom Lovelace card example:<br />
-![Pollen information above medium concentration](https://raw.githubusercontent.com/amaximus/pollen-hu/main/pollen1.png)
+![Pollen information above medium concentration](https://raw.githubusercontent.com/amaximus/pollen_hu/main/pollen1.png)
 
 ## Thanks
 
