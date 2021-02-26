@@ -35,6 +35,39 @@ name: 'Pollen adatok'
 #### Lovelace UI
 There is a Lovelace custom card related to this component at [https://github.com/amaximus/pollen-hu-card](https://github.com/amaximus/pollen-hu-card).
 
+If you want to show only the dominant pollen you may skip using the pollen-hu-card and use the following:
+
+```
+type: conditional
+conditions:
+  - entity: sensor.pollen
+    state_not: '0'
+  - entity: sensor.pollen
+    state_not: '1'
+  - entity: sensor.pollen
+    state_not: '2'
+card:
+  type: custom:button-card
+  icon: mdi:blur
+  size: 30px
+  styles:
+    label:
+      - font-size: 90%
+    card:
+      - height: 80px
+    icon:
+      - color: red
+  label: >
+    [[[
+      var pollen = states['sensor.pollen'].attributes.dominant_pollen;
+      return pollen;
+    ]]]
+  show_label: true
+  show_name: false
+  entity: sensor.pollen
+  color_type: icon
+```
+
 #### Custom Lovelace card example:<br />
 ![Pollen information above medium concentration](https://raw.githubusercontent.com/amaximus/pollen-hu/main/pollen1.png)
 
