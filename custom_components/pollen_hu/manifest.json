@@ -3,7 +3,7 @@
   "name": "Pollen Information Hungary",
   "documentation": "https://github.com/amaximus/pollen_hu",
   "issue_tracker": "https://github.com/amaximus/pollen_hu/issues",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "dependencies": [],
   "codeowners": ["@amaximus"],
   "requirements": []

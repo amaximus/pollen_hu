@@ -22,7 +22,7 @@ CONF_NAME = 'name'
 DEFAULT_NAME = 'Pollen HU'
 DEFAULT_ICON = 'mdi:blur'
 
-SCAN_INTERVAL = timedelta(hours=3)
+SCAN_INTERVAL = timedelta(hours=1)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
@@ -60,7 +60,6 @@ async def async_get_pdata(self):
              .replace("  ","") \
              .replace(" \"","\",\"") \
              .replace("\",\"name","\"},{\"name") \
-             .replace(" ","") \
              .replace(">", "{\"pollens\":[{") + "\"}]}"
         pjson = json.loads(p3)
     return pjson
@@ -86,7 +85,7 @@ class PollenHUSensor(Entity):
             for item in self._pdata['pollens']:
                 val = item.get('value')
                 if int(val) > dominant_value:
-                    attr["dominant_pollen_value"] = val
+                    attr["dominant_pollen_value"] = int(val)
                     attr["dominant_pollen"] = item.get('name')
                     dominant_value = int(val)
 
