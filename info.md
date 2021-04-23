@@ -12,7 +12,7 @@ will also be added into dedicated attributes.
 The sensor will also report in an attribute the values of all other pollens.
 
 #### Installation
-The easiest way to install it is through [HACS (Home Assistant Community Store)](https://custom-components.github.io/hacs/),
+The easiest way to install it is through [HACS (Home Assistant Community Store)](https://github.com/hacs/integration),
 search for <i>Pollen information Hungary</i> in the Integrations.<br />
 
 Sensor of this platform should be configured as per below information.
