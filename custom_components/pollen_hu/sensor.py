@@ -32,18 +32,14 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     name = config.get(CONF_NAME)
 
-    session = async_get_clientsession(hass)
-
     async_add_devices(
         [PollenHUSensor(hass, name )],update_before_add=True)
 
 async def async_get_pdata(self):
     pjson = {}
 
-    session = async_get_clientsession(self._hass)
-
     url = 'https://efop180.antsz.hu/polleninformaciok/'
-    async with session.get(url) as response:
+    async with self._session.get(url) as response:
         rsp1 = await response.text()
 
     rsp = rsp1.replace("\n","").replace("\r","")
@@ -73,6 +69,7 @@ class PollenHUSensor(Entity):
         self._state = None
         self._pdata = []
         self._icon = DEFAULT_ICON
+        self._session = async_get_clientsession(hass)
 
     @property
     def device_state_attributes(self):
