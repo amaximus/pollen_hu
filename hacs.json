@@ -1,7 +1,7 @@
 {
-  "name": "Pollen Information Hungary",
-  "country": ["HU"],
-  "domains": ["pollen_hu"],
+  "name": "Pollen Information France",
+  "country": ["FR"],
+  "domains": ["pollen_fr"],
   "render_readme": "true",
   "iot_class": ["Assumed State", "Cloud Polling"] 
 }
