@@ -1,0 +1,11 @@
+{
+  "domain": "pollen_fr",
+  "name": "Pollen Information France",
+  "documentation": "https://github.com/poilaunez/pollen_fr",
+  "issue_tracker": "https://github.com/poilaunez/pollen_fr/issues",
+  "version": "0.0.1",
+  "dependencies": [],
+  "codeowners": ["@amaximus"],
+  "iot_class": "cloud_polling",
+  "requirements": []
+}
