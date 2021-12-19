@@ -72,7 +72,7 @@ class PollenHUSensor(Entity):
         self._session = async_get_clientsession(hass)
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         attr = {}
         dominant_value = 0
 
