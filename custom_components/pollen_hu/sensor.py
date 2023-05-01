@@ -16,24 +16,28 @@ REQUIREMENTS = [ ]
 
 _LOGGER = logging.getLogger(__name__)
 
+CONF_ALLDOMINANT = 'all_dominant'
 CONF_ATTRIBUTION = "Data provided by antsz.hu"
 CONF_NAME = 'name'
 
-DEFAULT_NAME = 'Pollen HU'
+DEFAULT_ALLDOMINANT = False
 DEFAULT_ICON = 'mdi:blur'
+DEFAULT_NAME = 'Pollen HU'
 
 SCAN_INTERVAL = timedelta(hours=1)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+    vol.Optional(CONF_ALLDOMINANT, default=DEFAULT_ALLDOMINANT): cv.boolean,
 })
 
 @asyncio.coroutine
 def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     name = config.get(CONF_NAME)
+    alldominant = config.get(CONF_ALLDOMINANT)
 
     async_add_devices(
-        [PollenHUSensor(hass, name )],update_before_add=True)
+        [PollenHUSensor(hass, name, alldominant )],update_before_add=True)
 
 async def async_get_pdata(self):
     pjson = {}
@@ -62,10 +66,11 @@ async def async_get_pdata(self):
 
 class PollenHUSensor(Entity):
 
-    def __init__(self, hass, name):
+    def __init__(self, hass, name, alldominant):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
+        self._alldominant = alldominant
         self._state = None
         self._pdata = []
         self._icon = DEFAULT_ICON
@@ -84,6 +89,13 @@ class PollenHUSensor(Entity):
                 if int(val) > dominant_value:
                     attr["dominant_pollen_value"] = int(val)
                     attr["dominant_pollen"] = item.get('name')
+                    dominant_value = int(val)
+                elif int(val) == dominant_value and self._alldominant:
+                    if 'dominant_pollen' in attr:
+                        attr["dominant_pollen"] = attr["dominant_pollen"] + "|" + item.get('name')
+                    else:
+                        attr["dominant_pollen"] = item.get('name')
+                    attr["dominant_pollen_value"] = int(val)
                     dominant_value = int(val)
 
         attr["provider"] = CONF_ATTRIBUTION

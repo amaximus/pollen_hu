@@ -24,6 +24,7 @@ Define sensor with the following configuration parameters:<br />
 | Name | Optional | `Default` | Description |
 | :---- | :---- | :------- | :----------- |
 | name | **Y** | `pollen_hu` | name of the sensor |
+| all_dominant | **Y** | `False` | gather all dominant pollens. By the default it will show the first dominant pollen even if there are others too. |
 ---
 
 #### Example
