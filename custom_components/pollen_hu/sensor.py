@@ -79,7 +79,7 @@ class PollenHUSensor(Entity):
     @property
     def extra_state_attributes(self):
         attr = {}
-        dominant_value = 0
+        dominant_value = -1
 
         if 'pollens' in self._pdata:
             attr["pollens"] = self._pdata.get('pollens')
@@ -90,11 +90,14 @@ class PollenHUSensor(Entity):
                     attr["dominant_pollen_value"] = int(val)
                     attr["dominant_pollen"] = item.get('name')
                     dominant_value = int(val)
+                    attr["dominant_pollens_nr"] = 1
                 elif int(val) == dominant_value and self._alldominant:
                     if 'dominant_pollen' in attr:
                         attr["dominant_pollen"] = attr["dominant_pollen"] + "|" + item.get('name')
+                        attr["dominant_pollens_nr"] = attr["dominant_pollens_nr"] + 1
                     else:
                         attr["dominant_pollen"] = item.get('name')
+                        attr["dominant_pollens_nr"] = 1
                     attr["dominant_pollen_value"] = int(val)
                     dominant_value = int(val)
 
