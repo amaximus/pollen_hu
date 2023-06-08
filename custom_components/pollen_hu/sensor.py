@@ -31,8 +31,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_ALLDOMINANT, default=DEFAULT_ALLDOMINANT): cv.boolean,
 })
 
-@asyncio.coroutine
-def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
+async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     name = config.get(CONF_NAME)
     alldominant = config.get(CONF_ALLDOMINANT)
 
@@ -104,7 +103,6 @@ class PollenHUSensor(Entity):
         attr["provider"] = CONF_ATTRIBUTION
         return attr
 
-    @asyncio.coroutine
     async def async_update(self):
         dominant_value = 0
 
