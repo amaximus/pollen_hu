@@ -18,6 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 CONF_ALLDOMINANT = 'all_dominant'
 CONF_ATTRIBUTION = "Data provided by antsz.hu"
 CONF_NAME = 'name'
+CONF_POLLENS = 'pollens'
 
 DEFAULT_ALLDOMINANT = False
 DEFAULT_ICON = 'mdi:blur'
@@ -28,17 +29,20 @@ SCAN_INTERVAL = timedelta(hours=1)
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Optional(CONF_ALLDOMINANT, default=DEFAULT_ALLDOMINANT): cv.boolean,
+    vol.Optional(CONF_POLLENS, default=[]): vol.All(cv.ensure_list, [cv.string]),
 })
 
 async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     name = config.get(CONF_NAME)
     alldominant = config.get(CONF_ALLDOMINANT)
+    pollens = config.get(CONF_POLLENS)
 
     async_add_devices(
-        [PollenHUSensor(hass, name, alldominant )],update_before_add=True)
+        [PollenHUSensor(hass, name, alldominant, pollens )],update_before_add=True)
 
 async def async_get_pdata(self):
-    pjson = {}
+    pjson = {"pollens": []}
+    pjson1 = {}
 
     url = 'https://efop180.antsz.hu/polleninformaciok/'
     async with self._session.get(url) as response:
@@ -59,18 +63,29 @@ async def async_get_pdata(self):
              .replace(" \"","\",\"") \
              .replace("\",\"name","\"},{\"name") \
              .replace(">", "{\"pollens\":[{") + "\"}]}"
-        pjson = json.loads(p3)
+        pjson1 = json.loads(p3)
+        if len(self._pollens) != 0:
+            i = 0
+            for item in pjson1['pollens']:
+                if item.get('name') not in self._pollens:
+                    continue
+                else:
+                    pjson['pollens'].append({"name": item.get('name'),"value": item.get('value')})
+                    i += 1;
+        else:
+            pjson = pjson1
     return pjson
 
 class PollenHUSensor(Entity):
 
-    def __init__(self, hass, name, alldominant):
+    def __init__(self, hass, name, alldominant, pollens):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
         self._alldominant = alldominant
         self._state = None
         self._pdata = []
+        self._pollens = pollens
         self._icon = DEFAULT_ICON
         self._session = async_get_clientsession(hass)
 
@@ -105,9 +120,8 @@ class PollenHUSensor(Entity):
     async def async_update(self):
         dominant_value = 0
 
-        pdata = await async_get_pdata(self)
+        self._pdata = await async_get_pdata(self)
 
-        self._pdata = pdata
         if 'pollens' in self._pdata:
             for item in self._pdata['pollens']:
                 val = item.get('value')
