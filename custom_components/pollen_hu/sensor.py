@@ -19,10 +19,12 @@ CONF_ALLDOMINANT = 'all_dominant'
 CONF_ATTRIBUTION = "Data provided by antsz.hu"
 CONF_NAME = 'name'
 CONF_POLLENS = 'pollens'
+CONF_SSL = 'ssl'
 
 DEFAULT_ALLDOMINANT = False
 DEFAULT_ICON = 'mdi:blur'
 DEFAULT_NAME = 'Pollen HU'
+DEFAULT_SSL = True
 
 SCAN_INTERVAL = timedelta(hours=1)
 
@@ -30,15 +32,17 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Optional(CONF_ALLDOMINANT, default=DEFAULT_ALLDOMINANT): cv.boolean,
     vol.Optional(CONF_POLLENS, default=[]): vol.All(cv.ensure_list, [cv.string]),
+    vol.Optional(CONF_SSL, default=DEFAULT_SSL): cv.boolean,
 })
 
 async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     name = config.get(CONF_NAME)
     alldominant = config.get(CONF_ALLDOMINANT)
     pollens = config.get(CONF_POLLENS)
+    ssl = config.get(CONF_SSL)
 
     async_add_devices(
-        [PollenHUSensor(hass, name, alldominant, pollens )],update_before_add=True)
+        [PollenHUSensor(hass, name, alldominant, pollens, ssl)],update_before_add=True)
 
 async def async_get_pdata(self):
     pjson = {"pollens": []}
@@ -78,7 +82,7 @@ async def async_get_pdata(self):
 
 class PollenHUSensor(Entity):
 
-    def __init__(self, hass, name, alldominant, pollens):
+    def __init__(self, hass, name, alldominant, pollens, ssl):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
@@ -86,8 +90,9 @@ class PollenHUSensor(Entity):
         self._state = None
         self._pdata = []
         self._pollens = pollens
+        self._ssl = ssl
         self._icon = DEFAULT_ICON
-        self._session = async_get_clientsession(hass)
+        self._session = async_get_clientsession(hass, ssl)
 
     @property
     def extra_state_attributes(self):

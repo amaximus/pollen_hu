@@ -26,6 +26,7 @@ Define sensor with the following configuration parameters:<br />
 | name | **Y** | `pollen_hu` | name of the sensor |
 | all_dominant | **Y** | `False` | gather all dominant pollens. By the default it will show the first dominant pollen even if there are others too. |
 | pollens | **Y** | `` | list of pollen names to filter on. |
+| ssl | **Y** | `true` | control SSL verification. This is useful when CA store update with new root/intermediate certificates is problematic. WARNING: setting this to `false` is a security breach. |
 ---
 
 #### Example
