@@ -1,8 +1,9 @@
+import aiohttp
 import json
 import logging
 import re
 import voluptuous as vol
-import aiohttp
+from datetime import datetime
 from datetime import timedelta
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA
@@ -49,8 +50,13 @@ async def async_get_pdata(self):
     pjson1 = {}
 
     url = 'https://efop180.antsz.hu/polleninformaciok/'
-    async with self._session.get(url) as response:
-        rsp1 = await response.text()
+    try:
+        async with self._session.get(url) as response:
+            rsp1 = await response.text()
+        if response.status != 200:
+            rsp1 = ""
+    except(aiohttp.client_exceptions.ClientConnectorError):
+            rsp1 = ""
 
     rsp = rsp1.replace("\n","").replace("\r","")
 
@@ -88,6 +94,7 @@ class PollenHUSensor(Entity):
         self._name = name
         self._alldominant = alldominant
         self._state = None
+        self._last_poll = ""
         self._pdata = []
         self._pollens = pollens
         self._ssl = ssl
@@ -120,6 +127,7 @@ class PollenHUSensor(Entity):
                     dominant_value = int(val)
 
         attr["provider"] = CONF_ATTRIBUTION
+        attr["last_poll"] = self._last_poll
         return attr
 
     async def async_update(self):
@@ -133,6 +141,8 @@ class PollenHUSensor(Entity):
                 if int(val) > dominant_value:
                     dominant_value = int(val)
 
+        dt_now = datetime.now()
+        self._last_poll = dt_now.strftime("%Y/%m/%d %H:%M")
         self._state = dominant_value
         return self._state
 
