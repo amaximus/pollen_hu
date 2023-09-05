@@ -48,6 +48,7 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
 async def async_get_pdata(self):
     pjson = {"pollens": []}
     pjson1 = {}
+    successful_poll = "true"
 
     url = 'https://efop180.antsz.hu/polleninformaciok/'
     try:
@@ -55,8 +56,10 @@ async def async_get_pdata(self):
             rsp1 = await response.text()
         if response.status != 200:
             rsp1 = ""
+            successful_poll = "false"
     except(aiohttp.client_exceptions.ClientConnectorError):
             rsp1 = ""
+            successful_poll = "false"
 
     rsp = rsp1.replace("\n","").replace("\r","")
 
@@ -84,6 +87,7 @@ async def async_get_pdata(self):
                     i += 1;
         else:
             pjson = pjson1
+    pjson['successful_poll'] = successful_poll
     return pjson
 
 class PollenHUSensor(Entity):
@@ -98,6 +102,7 @@ class PollenHUSensor(Entity):
         self._pdata = []
         self._pollens = pollens
         self._ssl = ssl
+        self._successful_poll = "true"
         self._icon = DEFAULT_ICON
         self._session = async_get_clientsession(hass, ssl)
 
@@ -128,6 +133,7 @@ class PollenHUSensor(Entity):
 
         attr["provider"] = CONF_ATTRIBUTION
         attr["last_poll"] = self._last_poll
+        attr["successful_poll"] = self._successful_poll
         return attr
 
     async def async_update(self):
@@ -144,6 +150,7 @@ class PollenHUSensor(Entity):
         dt_now = datetime.now()
         self._last_poll = dt_now.strftime("%Y/%m/%d %H:%M")
         self._state = dominant_value
+        self._successful_poll = self._pdata['successful_poll']
         return self._state
 
     @property
