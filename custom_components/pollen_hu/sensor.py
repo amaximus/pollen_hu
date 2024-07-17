@@ -2,6 +2,7 @@ import aiohttp
 import json
 import logging
 import re
+import time
 import voluptuous as vol
 from datetime import datetime
 from datetime import timedelta
@@ -27,6 +28,8 @@ DEFAULT_ICON = 'mdi:blur'
 DEFAULT_NAME = 'Pollen HU'
 DEFAULT_SSL = True
 
+HTTP_TIMEOUT = 10 # secs
+MAX_RETRIES = 3
 SCAN_INTERVAL = timedelta(hours=1)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
@@ -45,21 +48,37 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
     async_add_devices(
         [PollenHUSensor(hass, name, alldominant, pollens, ssl)],update_before_add=True)
 
+def _sleep(secs):
+    time.sleep(secs)
+
 async def async_get_pdata(self):
     pjson = {"pollens": []}
     pjson1 = {}
     successful_poll = "true"
 
     url = 'https://efop180.antsz.hu/polleninformaciok/'
-    try:
-        async with self._session.get(url) as response:
-            rsp1 = await response.text()
-        if response.status != 200:
+    _session = async_get_clientsession(self._hass, self._ssl)
+    for i in range(MAX_RETRIES):
+        try:
+            async with _session.get(url, timeout=HTTP_TIMEOUT) as response:
+                rsp1 = await response.text()
+                _LOGGER.debug(url + " " + str(response.status))
+
+            if not response.status // 100 == 2:
+                rsp1 = ""
+                successful_poll = "false"
+                _LOGGER.debug("donwload not successful")
+                await self._hass.async_add_executor_job(_sleep, 10)
+            else:
+                _LOGGER.debug("rsp1: " + rsp1)
+                break
+            _LOGGER.debug(url + " " + str(response.text()))
+        except Exception as err:
             rsp1 = ""
             successful_poll = "false"
-    except(aiohttp.client_exceptions.ClientConnectorError):
-            rsp1 = ""
-            successful_poll = "false"
+            _LOGGER.debug("Fetch attempt " + str(i+1) + " failed for " + url)
+            _LOGGER.debug(f'error: {err} of type: {type(err)}')
+            await self._hass.async_add_executor_job(_sleep, 10)
 
     rsp = rsp1.replace("\n","").replace("\r","")
 
@@ -88,6 +107,7 @@ async def async_get_pdata(self):
         else:
             pjson = pjson1
     pjson['successful_poll'] = successful_poll
+    _LOGGER.debug(str(pjson))
     return pjson
 
 class PollenHUSensor(Entity):
@@ -104,7 +124,6 @@ class PollenHUSensor(Entity):
         self._ssl = ssl
         self._successful_poll = "true"
         self._icon = DEFAULT_ICON
-        self._session = async_get_clientsession(hass, ssl)
 
     @property
     def extra_state_attributes(self):
