@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import time
+import unidecode
 import voluptuous as vol
 from datetime import datetime
 from datetime import timedelta
@@ -22,97 +23,141 @@ CONF_ATTRIBUTION = "Data provided by antsz.hu"
 CONF_NAME = 'name'
 CONF_POLLENS = 'pollens'
 CONF_SSL = 'ssl'
+CONF_TOWN = "town"
 
 DEFAULT_ALLDOMINANT = False
 DEFAULT_ICON = 'mdi:blur'
 DEFAULT_NAME = 'Pollen HU'
+DEFAULT_POLLENS = ['parlagfu']
 DEFAULT_SSL = True
+DEFAULT_TOWN = 'budapest'
 
 HTTP_TIMEOUT = 10 # secs
 MAX_RETRIES = 3
+POLLEN_API="https://ugyvitel.nngyk.gov.hu/kornyezetegeszsegugy/api/pollen-search/"
 SCAN_INTERVAL = timedelta(hours=1)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Optional(CONF_ALLDOMINANT, default=DEFAULT_ALLDOMINANT): cv.boolean,
-    vol.Optional(CONF_POLLENS, default=[]): vol.All(cv.ensure_list, [cv.string]),
+    vol.Optional(CONF_POLLENS, default=DEFAULT_POLLENS): vol.All(cv.ensure_list, [cv.string]),
     vol.Optional(CONF_SSL, default=DEFAULT_SSL): cv.boolean,
+    vol.Optional(CONF_TOWN, default=DEFAULT_TOWN): cv.string,
 })
+
+def _get_pollen_id(argument):
+    switcher = {
+      "alternaria": "26",
+      "balvanyfa": "27",
+      "bukk": "16",
+      "ciprusfelek": "6",
+      "tiszafafelek": "6",
+      "ciprusfelek/tiszafafelek": "6",
+      "csalanfelek": "19",
+      "dio": "15",
+      "eger": "4",
+      "eperfafelek": "17",
+      "epicoccum": "28",
+      "fenyofelek": "18",
+      "fuz": "11",
+      "gyertyan": "12",
+      "hars": "22",
+      "juhar": "10",
+      "kenderfelek": "23",
+      "koris": "7",
+      "libatopfelek": "24",
+      "lorom": "21",
+      "mogyoro": "5",
+      "nyar": "8",
+      "nyir": "3",
+      "parlagfu": "1",
+      "pazsitfufelek": "2",
+      "platan": "13",
+      "szil": "9",
+      "tolgy": "14",
+      "utifu": "20",
+      "urom": "25",
+    }
+    return switcher.get(argument)
+
 
 async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     name = config.get(CONF_NAME)
     alldominant = config.get(CONF_ALLDOMINANT)
     pollens = config.get(CONF_POLLENS)
     ssl = config.get(CONF_SSL)
+    town = config.get(CONF_TOWN)
 
     async_add_devices(
-        [PollenHUSensor(hass, name, alldominant, pollens, ssl)],update_before_add=True)
+        [PollenHUSensor(hass, name, alldominant, pollens, ssl, town)],update_before_add=True)
 
 def _sleep(secs):
     time.sleep(secs)
 
 async def async_get_pdata(self):
     pjson = {"pollens": []}
-    pjson1 = {}
     successful_poll = "true"
 
-    url = 'https://efop180.antsz.hu/polleninformaciok/'
-    _session = async_get_clientsession(self._hass, self._ssl)
-    for i in range(MAX_RETRIES):
-        try:
-            async with _session.get(url, timeout=HTTP_TIMEOUT) as response:
-                rsp1 = await response.text()
-                _LOGGER.debug(url + " " + str(response.status))
+    dt_today = datetime.now()
+    str_today = dt_today.strftime("%Y-%m-%d")
 
-            if not response.status // 100 == 2:
+    _session = async_get_clientsession(self._hass, self._ssl)
+
+    for conf_pollen in self._pollens:
+        conf_pollen_norm = unidecode.unidecode(conf_pollen).lower()
+        pollen_id = _get_pollen_id(conf_pollen_norm)
+
+        _LOGGER.debug(str(type(pollen_id)))
+        if pollen_id is None:
+            _LOGGER.debug("non-valid " + conf_pollen)
+            continue
+
+        _LOGGER.debug(conf_pollen + " " + conf_pollen_norm )
+
+        url = POLLEN_API + 'search?filter=%7B%22datum%22%3A%22' + str_today \
+              + '%22%2C%22telepules%22%3A%22' + self._town \
+              + '%22%2C%22ertekek.noveny%22%3A%7B%22%24eq%22%3A%22' \
+              + pollen_id + '%22%7D%7D&page=1'
+        for i in range(MAX_RETRIES):
+            try:
+                async with _session.get(url, timeout=HTTP_TIMEOUT) as response:
+
+                    rsp1 = await response.text()
+                    _LOGGER.debug(url + " " + str(response.status))
+
+                if not response.status // 100 == 2:
+                    rsp1 = ""
+                    successful_poll = "false"
+                    _LOGGER.debug("donwload not successful")
+                    await self._hass.async_add_executor_job(_sleep, 10)
+                else:
+                    _LOGGER.debug("rsp1: " + rsp1)
+                    break
+                _LOGGER.debug(url + " " + str(response.text()))
+            except Exception as err:
                 rsp1 = ""
                 successful_poll = "false"
-                _LOGGER.debug("donwload not successful")
+                _LOGGER.debug("Fetch attempt " + str(i+1) + " failed for " + url)
+                _LOGGER.debug(f'error: {err} of type: {type(err)}')
                 await self._hass.async_add_executor_job(_sleep, 10)
-            else:
-                _LOGGER.debug("rsp1: " + rsp1)
-                break
-            _LOGGER.debug(url + " " + str(response.text()))
-        except Exception as err:
-            rsp1 = ""
-            successful_poll = "false"
-            _LOGGER.debug("Fetch attempt " + str(i+1) + " failed for " + url)
-            _LOGGER.debug(f'error: {err} of type: {type(err)}')
-            await self._hass.async_add_executor_job(_sleep, 10)
 
-    rsp = rsp1.replace("\n","").replace("\r","")
+        if successful_poll == "true":
+            val = json.loads(rsp1)
+            if len(val['rows']) > 0:
+                n_val = val["rows"][0]["ertekek"]["kategoria"]
+                if n_val == "nincs-adat":
+                    n_val = -1
+                pjson['pollens'].append({"name": conf_pollen_norm, \
+                    "value": n_val})
+                _LOGGER.debug(str(n_val))
 
-    p0 = re.findall(r"contentpagetitle\">.*</a></div><div class=\"ertek\">\d+",rsp)
-    if len(p0) > 0:
-        p1 = p0[0].replace(" </a>","</a>") \
-             .replace("contentpagetitle\">",">\"name\":\"") \
-             .replace("ertek\">",">\"value\":\"")
-        clean = re.compile('<.*?>')
-        p2 = re.sub(clean, ' ', p1)
-        p3 = re.sub(r"([0-9])",r"\1 ",p2) \
-             .replace("contentpagetitle\">", '') \
-             .replace("  ","") \
-             .replace(" \"","\",\"") \
-             .replace("\",\"name","\"},{\"name") \
-             .replace(">", "{\"pollens\":[{") + "\"}]}"
-        pjson1 = json.loads(p3)
-        if len(self._pollens) != 0:
-            i = 0
-            for item in pjson1['pollens']:
-                if item.get('name') not in self._pollens:
-                    continue
-                else:
-                    pjson['pollens'].append({"name": item.get('name'),"value": item.get('value')})
-                    i += 1;
-        else:
-            pjson = pjson1
     pjson['successful_poll'] = successful_poll
     _LOGGER.debug(str(pjson))
     return pjson
 
 class PollenHUSensor(Entity):
 
-    def __init__(self, hass, name, alldominant, pollens, ssl):
+    def __init__(self, hass, name, alldominant, pollens, ssl, town):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
@@ -122,6 +167,7 @@ class PollenHUSensor(Entity):
         self._pdata = []
         self._pollens = pollens
         self._ssl = ssl
+        self._town = unidecode.unidecode(town).lower()
         self._successful_poll = "true"
         self._icon = DEFAULT_ICON
 

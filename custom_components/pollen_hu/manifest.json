@@ -7,5 +7,5 @@
   "dependencies": [],
   "codeowners": ["@amaximus"],
   "iot_class": "cloud_polling",
-  "requirements": []
+  "requirements": ["unidecode"]
 }
